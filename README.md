@@ -25,12 +25,15 @@ In Sharad Ratatui, the role of the GM is handled by a mix of AI for the Narratio
 
 ### Requirements
 
-To play Sharad Ratatui, you will need an OpenAI API Key. This key is necessary to enable the game's narrative generation and other dynamic features. If you don't have an API key but still want to contribute, you can contact the maintainer to get sponsored.
+Sharad Ratatui now uses the local Codex CLI (`codex exec`) for narrative generation.
 
-You can provide your API key in two ways:
+Required:
+1. Install Codex CLI
+2. Run `codex login` once on your machine
 
-1. **Environment Variable** (recommended): Set the `OPENAI_API_KEY` environment variable
-2. **In-game Settings**: Enter your API key through the game's settings menu
+Optional:
+1. `OPENAI_API_KEY` only if you want OpenAI-backed voice/image features
+2. Or set the same key in the in-game settings menu
 
 ## 🛠️ Project Architecture Overview
 
@@ -50,12 +53,11 @@ The game is built using the [Ratatui](https://github.com/tui-rs-revival/ratatui)
 
 1. Clone the repository
 2. Install Rust if you haven't already (`https://www.rust-lang.org/tools/install`)
-3. Obtain an OpenAI API Key from the [OpenAI website](https://beta.openai.com/signup/)
-4. Set your API key using one of these methods:
-   - **Option A (Recommended)**: Set environment variable: `export OPENAI_API_KEY=your_api_key_here`
-   - **Option B**: Run the game and enter your API key in the settings menu
-5. Run `cargo build` to compile the project
-6. Start the game with `cargo run`
+3. Install Codex CLI and log in: `codex login`
+4. Run `cargo build` to compile the project
+5. Start the game with `cargo run`
+
+Optional (voice/image features only): set `OPENAI_API_KEY` or enter it in settings.
 
 ### Environment Variable Examples
 

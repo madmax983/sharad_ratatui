@@ -116,7 +116,7 @@ impl Component for InGame {
                 self.vim.mode = mode;
                 match mode {
                     Mode::Recording => {
-                        if !context.settings.audio_input_enabled {
+                        if !context.settings.audio_input_enabled || context.ai_client.is_none() {
                             self.vim.mode = Mode::new_warning(Warning::AudioInputDisabled);
                             log::info!("Played Warning {:#?}", self.vim.mode);
                             return None;
@@ -124,9 +124,11 @@ impl Component for InGame {
                         try_play_asset("end");
                         self.textarea.set_placeholder_text("Recording...");
                         log::debug!("Strated the recording");
-                        if let Ok((receiver, transcription)) =
-                            Transcription::new(None, context.ai_client.clone().unwrap())
-                        {
+                        let Some(ai_client) = context.ai_client.clone() else {
+                            self.vim.mode = Mode::new_warning(Warning::AudioInputDisabled);
+                            return None;
+                        };
+                        if let Ok((receiver, transcription)) = Transcription::new(None, ai_client) {
                             self.receiver = Some(receiver);
                             Some(Action::SwitchInputMode(InputMode::Recording(transcription)))
                         } else {

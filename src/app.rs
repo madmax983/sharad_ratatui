@@ -1,6 +1,5 @@
 use crate::{
     ai::GameAI,
-    assistant::create_assistant,
     audio::{self, AudioNarration, Transcription},
     character::{CharacterSheet, CharacterSheetUpdate},
     context::Context,
@@ -13,7 +12,7 @@ use crate::{
     save::{SaveManager, get_save_base_dir},
     settings::Settings,
     tui::{Tui, TuiEvent},
-    ui::{Component, ComponentEnum, api_key_input::ApiKeyInput, game::InGame, main_menu::MainMenu},
+    ui::{Component, ComponentEnum, game::InGame, main_menu::MainMenu},
 };
 
 use async_openai::{Client, config::OpenAIConfig};
@@ -83,16 +82,19 @@ impl App {
         load_game_menu_state.select(Some(0));
 
         let settings = Settings::try_load();
-        let ai_client;
-        let mut game_ai: Option<GameAI> = None;
-        if let Some(api_key) = &settings.openai_api_key {
-            ai_client = Settings::validate_ai_client(api_key).await;
-            game_ai = GameAI::new(api_key, ai_sender.clone(), image_sender.clone())
-                .await
-                .ok()
+        let ai_client = if let Some(api_key) = &settings.openai_api_key {
+            Settings::validate_ai_client(api_key).await
         } else {
-            ai_client = None
+            None
         };
+
+        let game_ai = GameAI::new(
+            settings.openai_api_key.as_deref(),
+            ai_sender.clone(),
+            image_sender.clone(),
+        )
+        .await
+        .ok();
 
         Self {
             running: true,
@@ -362,7 +364,7 @@ impl App {
                 .fetch_all_messages(&thread_id)
                 .await
                 .expect("Expected the return of vec messages");
-            let messages = all_messages[1..].to_vec();
+            let messages = all_messages;
 
             match sender.send(AIMessage::Game((messages, ai, game_state))) {
                 Ok(_) => {}
@@ -424,30 +426,14 @@ impl App {
     }
 
     pub fn start_new_game(&mut self, save_name: String) -> Result<()> {
-        if self.ai_client.is_none() {
-            self.component = ComponentEnum::ApiKeyInput(ApiKeyInput::new(&None));
-            return Ok(());
-        }
-        let ai_client = self.ai_client.clone().unwrap();
-        let settings = self.settings.clone();
         let game_ai = self.game_ai.clone();
         let ai_sender = self.ai_sender.clone();
         let save_manager = self.save_manager.clone();
+        let settings = self.settings.clone();
 
         tokio::spawn(async move {
-            let assistant = match create_assistant(&ai_client, &settings.model, &save_name).await {
-                Ok(assistant) => assistant,
-                Err(e) => {
-                    log::error!("Failed to create assistant: {:?}", e);
-                    return;
-                }
-            };
-
-            let assistant_id = &assistant.id;
-
             if let Some(ai) = game_ai {
-                let mut game_state = match ai.start_new_conversation(assistant_id, &save_name).await
-                {
+                let mut game_state = match ai.start_new_conversation(&save_name).await {
                     Ok(game_state) => game_state,
                     Err(e) => {
                         log::error!(

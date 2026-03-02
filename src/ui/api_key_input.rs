@@ -117,14 +117,14 @@ impl Component for ApiKeyInput {
 
         let title = match context.ai_client {
             Some(_) => {
-                let title = Paragraph::new(" Your Api Key is valid! ".bold())
+                let title = Paragraph::new(" OpenAI key is valid (optional feature) ".bold())
                     .style(Style::default().fg(Color::Green))
                     .alignment(Alignment::Center);
 
                 title
             }
             None => {
-                let title = Paragraph::new(" Please input a Valid Api Key ")
+                let title = Paragraph::new(" Optional: input OpenAI key for voice/image ")
                     .style(Style::default().fg(Color::Red))
                     .alignment(Alignment::Center);
                 log::debug!("Title set to: {title:#?}");
@@ -136,10 +136,11 @@ impl Component for ApiKeyInput {
         self.textarea.render(chunks[1], buffer);
         title.render(chunks[0], buffer);
 
-        let paste_info =
-            Paragraph::new(" Use Ctrl+v or 'p' to paste, or insert 'reset' to reset your Api Key ")
-                .style(Style::default().fg(Color::Gray))
-                .alignment(Alignment::Center);
+        let paste_info = Paragraph::new(
+            " Use Ctrl+v or 'p' to paste, or type 'reset' to clear the optional OpenAI key ",
+        )
+        .style(Style::default().fg(Color::Gray))
+        .alignment(Alignment::Center);
         paste_info.render(chunks[2], buffer);
         // TODO: Make sure the cursor is properly set.
     }
@@ -164,19 +165,19 @@ impl ApiKeyInput {
         {
             log::error!("Failed to save_to_file: {e:#?}");
             self.textarea = new_textarea(
-                "The Api key Reset could not be saved to file. Please delete your settings file manually.",
+                "The key reset could not be saved to file. Please delete your settings file manually.",
             );
             self.textarea
                 .set_placeholder_style(Style::new().fg(Color::Red));
         } else {
-            self.textarea = new_textarea("Your Api key has been reset.");
+            self.textarea = new_textarea("Your OpenAI key has been reset.");
         }
     }
 
     fn validate_key(&mut self, context: &mut Context<'_>) -> Option<Action> {
         let Some(api_ref) = self.textarea.lines().first() else {
             self.textarea =
-                new_textarea("Please input a valid Api Key (or 'reset' to reset you Api Key)");
+                new_textarea("Please input a valid OpenAI key (or 'reset' to clear it)");
             return None;
         };
         let api_key = api_ref.to_string();
@@ -187,7 +188,7 @@ impl ApiKeyInput {
                 ApiKeyInput::new(&context.settings.openai_api_key),
             )));
         }
-        self.textarea = new_textarea(" Please wait a moment while we verify the key");
+        self.textarea = new_textarea(" Please wait while we verify the OpenAI key");
 
         let new_ai_client = tokio::task::block_in_place(|| {
             Handle::current().block_on(Settings::validate_ai_client(&api_key))
@@ -201,10 +202,10 @@ impl ApiKeyInput {
                 log::error!("Failed to save to default path: {:#?}", e);
             }
             log::debug!("New context set: {context:#?}");
-            self.textarea = new_textarea(" Your Api Key is Valid!");
+            self.textarea = new_textarea(" Your OpenAI key is valid.");
             Some(Action::SwitchInputMode(InputMode::Normal))
         } else {
-            self.textarea = new_textarea("This key is invalid");
+            self.textarea = new_textarea("This OpenAI key is invalid");
             None
         }
     }
@@ -212,7 +213,7 @@ impl ApiKeyInput {
 
 pub fn new_textarea_with_key(api_key: &Option<String>) -> TextArea<'static> {
     match api_key {
-        None => new_textarea("Please input a valid Api key"),
+        None => new_textarea("Optional: input OpenAI key"),
         Some(api_key) => new_textarea(hide_api(api_key)),
     }
 }
@@ -227,5 +228,5 @@ fn hide_api(s: &str) -> String {
     let head = &s[..head_len];
     let tail = &s[s.len() - tail_len..];
 
-    format!(" Valid Api Key: {}...{}", head, tail)
+    format!(" OpenAI key: {}...{}", head, tail)
 }

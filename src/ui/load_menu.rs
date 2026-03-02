@@ -3,8 +3,7 @@
 use std::path::PathBuf;
 
 use super::{
-    Component, ComponentEnum, SaveName, api_key_input::ApiKeyInput, draw::center_rect,
-    main_menu_fix::*, widgets::StatefulList,
+    Component, ComponentEnum, SaveName, draw::center_rect, main_menu_fix::*, widgets::StatefulList,
 };
 use crate::{
     app::Action,
@@ -30,16 +29,9 @@ pub struct LoadMenu {
 impl Component for LoadMenu {
     fn on_key(&mut self, key: KeyEvent, context: &mut Context) -> Option<Action> {
         match key.code {
-            KeyCode::Enter if context.save_manager.available_saves.is_empty() => {
-                match context.ai_client {
-                    Some(_) => Some(Action::SwitchComponent(ComponentEnum::SaveName(
-                        SaveName::default(),
-                    ))),
-                    None => Some(Action::SwitchComponent(ComponentEnum::ApiKeyInput(
-                        ApiKeyInput::new(&None),
-                    ))),
-                }
-            }
+            KeyCode::Enter if context.save_manager.available_saves.is_empty() => Some(
+                Action::SwitchComponent(ComponentEnum::SaveName(SaveName::default())),
+            ),
             KeyCode::Enter | KeyCode::Char('l') | KeyCode::Right => {
                 self.state.state.selected().map(|selected| {
                     Action::LoadSave(context.save_manager.available_saves[selected].clone())
@@ -69,7 +61,7 @@ impl Component for LoadMenu {
                                 &context.save_manager.available_saves
                                     [self.state.state.selected().unwrap()]
                                 .clone(),
-                                &context.settings.openai_api_key.clone().unwrap(),
+                                context.settings.openai_api_key.as_deref(),
                             )
                             .expect("Expected save deletion");
                     }

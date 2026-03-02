@@ -24,9 +24,9 @@ impl SettingsState {
                 },
                 0, // API Key (always 0 as it's not a toggle)
                 match settings.model.as_str() {
-                    "gpt-4o-mini" => 0,
-                    "gpt-4o" => 1,
-                    "o1-mini" => 2,
+                    "default" => 0,
+                    "gpt-5" => 1,
+                    "gpt-5-mini" => 2,
                     _ => 0,
                 },
                 if settings.audio_output_enabled { 0 } else { 1 },

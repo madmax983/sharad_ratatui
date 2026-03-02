@@ -127,8 +127,8 @@ impl SettingsMenu {
         // TODO: Make this dynamic based on settings content.
         let settings = [
             ("Language", vec!["English", "Français", "日本語", "Türkçe"]),
-            ("AI API Key", vec![]),
-            ("OpenAI Model", vec!["gpt-4o-mini", "gpt-4o", "o1-mini"]),
+            ("Optional OpenAI Key", vec![]),
+            ("Codex Model Hint", vec!["default", "gpt-5", "gpt-5-mini"]),
             ("Voice Output", vec!["On", "Off"]),
             ("Voice Input", vec!["On", "Off"]),
             ("Debug Mode", vec!["Off", "On"]),
@@ -237,9 +237,9 @@ impl SettingsMenu {
             _ => context.settings.language.clone(),
         };
         context.settings.model = match self.state.selected_options[2] {
-            0 => "gpt-4o-mini".to_string(),
-            1 => "gpt-4o".to_string(),
-            2 => "o1-mini".to_string(),
+            0 => "default".to_string(),
+            1 => "gpt-5".to_string(),
+            2 => "gpt-5-mini".to_string(),
             _ => context.settings.model.clone(),
         };
         context.settings.audio_output_enabled = self.state.selected_options[3] == 0;
