@@ -73,13 +73,21 @@ impl GameAI {
 
         let prompt = self.build_codex_prompt(&request, &history)?;
         let raw_response = self.run_codex_exec(&prompt).await?;
-        let game_message = Self::parse_game_message_response(&raw_response)?;
+        let mut game_message = Self::parse_game_message_response(&raw_response)?;
 
         if let Some(new_character_sheet) = game_message.character_sheet.clone() {
-            self.update_character_sheet(&mut request.state, new_character_sheet)?;
-            ai_sender
-                .send(AIMessage::Save(request.state.clone()))
-                .map_err(Error::AISend)?;
+            let has_existing_sheet = request.state.main_character_sheet.is_some();
+            if Self::should_accept_character_sheet_update(
+                has_existing_sheet,
+                &request.message.player_action,
+            ) {
+                self.update_character_sheet(&mut request.state, new_character_sheet)?;
+                ai_sender
+                    .send(AIMessage::Save(request.state.clone()))
+                    .map_err(Error::AISend)?;
+            } else {
+                game_message.character_sheet = None;
+            }
         }
 
         let game_message_json = serde_json::to_string(&game_message)?;
@@ -150,8 +158,9 @@ Required output shape:\n\
 Rules:\n\
 - Keep the story moving.\n\
 - Use the requested language for all narrative text.\n\
+- Start by gathering character choices; do not auto-create a finalized character sheet.\n\
 - If you include character_sheet, it must be a full valid character sheet object.\n\
-- Leave character_sheet as null unless you are creating or fully replacing the sheet.\n\
+- Leave character_sheet as null unless the player is explicitly creating/finalizing a character or updating an existing sheet.\n\
 \n\
 Language: {language}\n\
 \n\
@@ -168,6 +177,25 @@ Latest player message JSON:\n\
             history_json = history_json,
             latest_user_json = latest_user_json,
         ))
+    }
+
+    fn should_accept_character_sheet_update(has_existing_sheet: bool, player_action: &str) -> bool {
+        if has_existing_sheet {
+            return true;
+        }
+
+        let action = player_action.to_lowercase();
+        [
+            "create a character",
+            "create character",
+            "build a character",
+            "build character",
+            "character creation",
+            "finalize character",
+            "confirm character",
+        ]
+        .iter()
+        .any(|phrase| action.contains(phrase))
     }
 
     async fn run_codex_exec(&self, prompt: &str) -> Result<String> {
@@ -325,5 +353,29 @@ mod tests {
             GameAI::parse_game_message_response(raw).expect("expected valid wrapped message");
         assert_eq!(parsed.crunch, "wrapped");
         assert_eq!(parsed.fluff.speakers.len(), 1);
+    }
+
+    #[test]
+    fn rejects_character_sheet_on_start_game_without_existing_sheet() {
+        assert!(!GameAI::should_accept_character_sheet_update(
+            false,
+            "Start the Game"
+        ));
+    }
+
+    #[test]
+    fn accepts_character_sheet_when_player_is_creating_character() {
+        assert!(GameAI::should_accept_character_sheet_update(
+            false,
+            "Let's create a character together"
+        ));
+    }
+
+    #[test]
+    fn accepts_character_sheet_when_sheet_already_exists() {
+        assert!(GameAI::should_accept_character_sheet_update(
+            true,
+            "Continue the story"
+        ));
     }
 }
